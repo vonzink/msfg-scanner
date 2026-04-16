@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MSFG Scanner — Document Cleanup</title>
+  <link rel="stylesheet" href="css/scanner.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Document Scanner</h1>
+    <p class="subtitle">Clean up hard-to-read scans and photos.</p>
+  </header>
+
+  <main class="app-main">
+    <section class="dropzone-section">
+      <div id="dropzone" class="dropzone" tabindex="0">
+        <div class="dropzone-content">
+          <p class="dropzone-primary">Drop an image here, or click to browse</p>
+          <p class="dropzone-secondary">JPG or PNG, up to 50 MB</p>
+          <input type="file" id="file-input" accept="image/jpeg,image/png" hidden />
+        </div>
+      </div>
+    </section>
+
+    <section class="controls-section" id="controls" hidden>
+      <div class="control-row">
+        <label for="preset-select">Preset</label>
+        <select id="preset-select">
+          <option value="auto" selected>Auto</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="preview-section" id="preview" hidden>
+      <div class="preview-pane">
+        <div class="pane-header">
+          <h3>Before</h3>
+        </div>
+        <img id="before-img" alt="Original" />
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header">
+          <h3>After</h3>
+          <div class="pane-actions">
+            <button id="download-btn" class="btn btn-primary" disabled>Download</button>
+            <button id="save-btn" class="btn" disabled>Save As…</button>
+            <button id="print-btn" class="btn" disabled>Print</button>
+          </div>
+        </div>
+        <img id="after-img" alt="Cleaned" />
+      </div>
+    </section>
+  </main>
+
+  <footer class="status-bar">
+    <span id="status">Loading scanner engine…</span>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
