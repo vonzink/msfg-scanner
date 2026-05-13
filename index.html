@@ -12,43 +12,152 @@
     <p class="subtitle">Clean up hard-to-read scans and photos.</p>
   </header>
 
+  <!-- Inline SVG filter for live sharpness preview. -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <filter id="sc-sharpen" x="-5%" y="-5%" width="110%" height="110%">
+        <feConvolveMatrix id="sc-sharpen-matrix" order="3" kernelMatrix="0 0 0 0 1 0 0 0 0" preserveAlpha="true" />
+      </filter>
+    </defs>
+  </svg>
+
   <main class="app-main">
     <section class="dropzone-section">
       <div id="dropzone" class="dropzone" tabindex="0">
         <div class="dropzone-content">
-          <p class="dropzone-primary">Drop an image here, or click to browse</p>
-          <p class="dropzone-secondary">JPG or PNG, up to 50 MB</p>
-          <input type="file" id="file-input" accept="image/jpeg,image/png" hidden />
+          <p class="dropzone-primary">Drop a file here, or click to browse</p>
+          <p class="dropzone-secondary">Accepts JPG, JPEG, PNG, PDF, HEIC, SVG &mdash; up to 50 MB</p>
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/heic,image/heif,image/svg+xml,application/pdf,.jpg,.jpeg,.png,.pdf,.heic,.heif,.svg" multiple hidden />
         </div>
       </div>
     </section>
 
     <section class="controls-section" id="controls" hidden>
-      <div class="control-row">
+      <div class="control-row" title="Choose how the scanner cleans up the image when you drop it in.">
         <label for="preset-select">Preset</label>
         <select id="preset-select">
-          <option value="auto" selected>Auto</option>
+          <option value="none">Original (no enhancement)</option>
+          <option value="statement" selected>Statement Restore (AI Enhanced)</option>
+          <option value="document-color">Document (Color)</option>
+          <option value="auto">Document B&amp;W (Auto)</option>
+          <option value="photo">Photo</option>
         </select>
+        <button type="button" id="reprocess-btn" class="btn" title="Re-run the selected preset on the current image">Apply</button>
+      </div>
+      <div class="control-row adjust">
+        <label for="adj-brightness">Brightness</label>
+        <input type="range" id="adj-brightness" min="50" max="150" value="100" />
+        <span class="adj-value" data-for="adj-brightness">100%</span>
+      </div>
+      <div class="control-row adjust">
+        <label for="adj-contrast">Contrast</label>
+        <input type="range" id="adj-contrast" min="50" max="200" value="100" />
+        <span class="adj-value" data-for="adj-contrast">100%</span>
+      </div>
+      <div class="control-row adjust">
+        <label for="adj-saturate">Saturation</label>
+        <input type="range" id="adj-saturate" min="0" max="200" value="100" />
+        <span class="adj-value" data-for="adj-saturate">100%</span>
+      </div>
+      <div class="control-row adjust">
+        <label for="adj-sharpness">Sharpness</label>
+        <input type="range" id="adj-sharpness" min="0" max="100" value="0" />
+        <span class="adj-value" data-for="adj-sharpness">0%</span>
+      </div>
+      <button type="button" id="adj-reset" class="btn">Reset</button>
+    </section>
+
+    <section class="document-section" id="document-tools" hidden>
+      <div class="page-strip-header">
+        <div>
+          <strong id="document-summary">No pages loaded</strong>
+          <span id="document-profile-status"></span>
+        </div>
+        <div class="page-actions">
+          <button type="button" id="page-prev-btn" class="btn" disabled>Prev</button>
+          <button type="button" id="page-next-btn" class="btn" disabled>Next</button>
+          <button type="button" id="apply-all-btn" class="btn" disabled>Apply All</button>
+        </div>
+      </div>
+      <div class="page-strip" id="page-strip" aria-label="Document pages"></div>
+      <div class="profile-grid">
+        <div class="control-row">
+          <label for="export-profile">Export</label>
+          <select id="export-profile">
+            <option value="standard">Standard PDF</option>
+            <option value="statement" selected>Statement upload profile</option>
+            <option value="compact">Compact under target MB</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label for="target-mb">Target MB</label>
+          <input type="number" id="target-mb" min="0.5" max="25" step="0.5" value="8" />
+        </div>
+        <div class="control-row">
+          <label for="filename-input">File name</label>
+          <input type="text" id="filename-input" placeholder="Borrower - Lender Month Statement" />
+        </div>
+      </div>
+      <details class="text-layer-panel">
+        <summary>Search text layer</summary>
+        <textarea id="search-text" rows="3" placeholder="Optional: paste OCR/search text here. If the uploaded PDF already contains text, it will appear here."></textarea>
+      </details>
+      <div class="quality-panel" id="quality-panel" hidden>
+        <strong>Quality checks</strong>
+        <ul id="quality-list"></ul>
       </div>
     </section>
 
     <section class="preview-section" id="preview" hidden>
-      <div class="preview-pane">
-        <div class="pane-header">
-          <h3>Before</h3>
+      <div class="toolbar-row">
+        <div class="zoom-toolbar">
+          <button type="button" class="btn" data-zoom="fit">Fit</button>
+          <button type="button" class="btn" data-zoom="100">100%</button>
+          <button type="button" class="btn" data-zoom="out" aria-label="Zoom out">&minus;</button>
+          <span id="zoom-level">100%</span>
+          <button type="button" class="btn" data-zoom="in" aria-label="Zoom in">+</button>
         </div>
-        <img id="before-img" alt="Original" />
+        <div class="image-tools">
+          <button id="rotate-left-btn" class="btn" disabled title="Rotate 90° left">&#x21BA;</button>
+          <button id="rotate-right-btn" class="btn" disabled title="Rotate 90° right">&#x21BB;</button>
+          <button id="upscale-btn" class="btn" disabled title="Upscale 2×">2&times; Upscale</button>
+          <button id="denoise-btn" class="btn" disabled title="Reduce noise">Denoise</button>
+          <button id="flatten-light-btn" class="btn" disabled title="Flatten shadows and paper folds">Flatten Light</button>
+          <button id="auto-levels-btn" class="btn" disabled title="Auto-stretch histogram">Auto Levels</button>
+          <button id="corners-btn" class="btn" disabled>Corner Fix</button>
+          <button id="corners-apply-btn" class="btn btn-primary" hidden>Apply Corners</button>
+          <button id="corners-cancel-btn" class="btn" hidden>Cancel</button>
+          <button id="crop-btn" class="btn" disabled>Crop</button>
+          <button id="crop-apply-btn" class="btn btn-primary" hidden>Apply</button>
+          <button id="crop-cancel-btn" class="btn" hidden>Cancel</button>
+          <button id="undo-btn" class="btn" disabled>Undo</button>
+          <button id="redo-btn" class="btn" disabled>Redo</button>
+          <button id="reset-img-btn" class="btn" disabled title="Revert to original result">Reset Image</button>
+        </div>
       </div>
-      <div class="preview-pane">
-        <div class="pane-header">
-          <h3>After</h3>
-          <div class="pane-actions">
-            <button id="download-btn" class="btn btn-primary" disabled>Download</button>
-            <button id="save-btn" class="btn" disabled>Save As…</button>
-            <button id="print-btn" class="btn" disabled>Print</button>
+      <p class="zoom-hint">Scroll to zoom &middot; drag to pan &middot; double&#8209;click to toggle</p>
+      <div class="preview-grid">
+        <div class="preview-pane">
+          <div class="pane-header"><h3>Before</h3></div>
+          <div class="viewport" id="before-viewport">
+            <img id="before-img" alt="Original" />
           </div>
         </div>
-        <img id="after-img" alt="Cleaned" />
+        <div class="preview-pane">
+          <div class="pane-header"><h3>After</h3></div>
+          <div class="viewport" id="after-viewport">
+            <img id="after-img" alt="Cleaned" />
+            <div id="crop-overlay" class="crop-overlay" hidden>
+              <div id="crop-rect" class="crop-rect"></div>
+            </div>
+            <div id="corner-overlay" class="corner-overlay" hidden>
+              <div class="corner-handle" data-corner="tl"></div>
+              <div class="corner-handle" data-corner="tr"></div>
+              <div class="corner-handle" data-corner="br"></div>
+              <div class="corner-handle" data-corner="bl"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -56,6 +165,15 @@
   <footer class="status-bar">
     <span id="status">Loading scanner engine…</span>
   </footer>
+
+  <div class="actions-footer" id="actions-footer" hidden>
+    <button id="download-btn" class="btn btn-primary" disabled>Download</button>
+    <button id="pdf-btn" class="btn btn-primary" disabled>PDF</button>
+    <button id="copy-btn" class="btn" disabled title="Copy image to clipboard">Copy</button>
+    <button id="print-btn" class="btn" disabled>Print</button>
+    <button id="dashboard-save-btn" class="btn" disabled title="Available when mounted inside dashboard">Save to Loan Folder</button>
+    <button type="button" id="clear-btn" class="btn">Clear</button>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>
